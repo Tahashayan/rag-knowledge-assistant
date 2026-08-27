@@ -25,9 +25,9 @@ client = qdrant_client.QdrantClient(
     timeout=600,        
 )
 
-collection_name = "enterprise_docs"
+collection_name = "enterprise_docs_v2"
 
-vector_store = QdrantVectorStore(client=client, collection_name=collection_name)
+vector_store = QdrantVectorStore(client=client, collection_name=collection_name, enable_hybrid=True)
 storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
 index = VectorStoreIndex.from_vector_store(
@@ -50,11 +50,9 @@ question = QueryBundle(query_str="What are the pillars of the AWS framework?")
 
 nodes = query_engine.retrieve(question)
 
-print(nodes)
-
 print("Reranking...")
 reranked_nodes = cohere_rerank.postprocess_nodes(nodes, query_bundle=question)
-print(len(reranked_nodes))
+print(reranked_nodes)
 
 for i, node in enumerate(reranked_nodes, start=1):
     print("file_name:", node.metadata.get("file_name"))

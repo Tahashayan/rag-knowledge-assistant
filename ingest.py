@@ -7,14 +7,17 @@ from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core import StorageContext, VectorStoreIndex
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from qdrant_client.http import models as qmodels
+from llama_index.readers.file import PyMuPDFReader
 
 Settings.embed_model = OllamaEmbedding(
     model_name="nomic-embed-text",
     base_url="http://localhost:11434",
 )
 
-reader = SimpleDirectoryReader("./data")
-documents = reader.load_data()
+parser = PyMuPDFReader()
+file_extractor = {".pdf": parser}
+
+documents = SimpleDirectoryReader("./data", file_extractor=file_extractor).load_data()
 
 TENANT_MAPPING = {
     "wellarchitected-framework.pdf": "company_A",
@@ -50,7 +53,7 @@ client = qdrant_client.QdrantClient(
     timeout=600,        
 )
 
-collection_name = 'enterprise_docs'
+collection_name = 'enterprise_docs_v2'
 
 if client.collection_exists(collection_name):
     print(f"Deleting broken collection '{collection_name}' (status was RED)...")
