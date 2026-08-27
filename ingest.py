@@ -16,13 +16,21 @@ Settings.embed_model = OllamaEmbedding(
 reader = SimpleDirectoryReader("./data")
 documents = reader.load_data()
 
+TENANT_MAPPING = {
+    "wellarchitected-framework.pdf": "company_A",
+    "the-economic-potential-of-generative-ai-the-next-productivity-frontier.pdf": "company_A",
+    "nike-ar-2023.pdf": "company_B",
+    "aapl-20230930.pdf": "company_B",
+    "btpd_ee_handbook_2023.pdf": "company_A",
+    "osage nation employee handbook (2023) - effective oct 16 2023_0.pdf": "company_A",
+    "lakeside+employee+handbook++(oct+23).pdf": "company_A",
+}
+
 for doc in documents:
-    filename = doc.metadata.get("file_name", "").lower()
+    filename = doc.metadata.get("file_name", "").strip().lower()
     
-    if "handbook" in filename:
-        doc.metadata["tenant_id"] = "company_A"
-    elif "10-k" in filename or "report" in filename:
-        doc.metadata["tenant_id"] = "company_B"
+    if filename in TENANT_MAPPING:
+        doc.metadata["tenant_id"] = TENANT_MAPPING[filename]
     else:
         doc.metadata["tenant_id"] = "unknown_document"
         
