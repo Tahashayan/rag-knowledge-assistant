@@ -10,6 +10,7 @@ from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
 from llama_index.core.schema import QueryBundle
 from fastapi.responses import StreamingResponse
 from langfuse import get_client
+from fastapi.middleware.cors import CORSMiddleware
 from llama_index.llms.groq import Groq
 from pydantic import BaseModel
 import qdrant_client
@@ -22,6 +23,13 @@ os.environ.setdefault("LANGFUSE_SECRET_KEY", "sk-lf-...")
 os.environ.setdefault("LANGFUSE_BASE_URL", "https://cloud.langfuse.com")
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 langfuse = get_client()
 
 if langfuse.auth_check():
