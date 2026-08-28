@@ -4,18 +4,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- stub must come before ANY ragas import ---
 import langchain_community.chat_models as chat_models
 fake_vertexai = types.ModuleType("langchain_community.chat_models.vertexai")
 fake_vertexai.ChatVertexAI = object
 sys.modules["langchain_community.chat_models.vertexai"] = fake_vertexai
 chat_models.vertexai = fake_vertexai
-# ------------------------------------------------
 
 import asyncio
-import time
 import pandas as pd
-from openai import AsyncOpenAI as OpenAICompatClient, RateLimitError  # used to hit Groq's OpenAI-compatible endpoint
+from openai import AsyncOpenAI as OpenAICompatClient, RateLimitError 
 from llama_index.core import Settings
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.core import StorageContext, VectorStoreIndex
@@ -30,32 +27,15 @@ from ragas.metrics.collections import Faithfulness, ContextPrecision
 
 cohere_api_key = os.environ["COHERE_API"]
 
-# ==========================================================
-# 1. SETUP THE "STUDENT" (Your LlamaIndex Pipeline)
-# ==========================================================
 Settings.embed_model = OllamaEmbedding(model_name="nomic-embed-text")
 Settings.llm = Groq(model="openai/gpt-oss-120b", api_key=os.environ["GROQ_API_KEY"])
 
-# ==========================================================
-# 2. SETUP THE "TEACHER" (Ragas judge LLM)
-# ==========================================================
-# ragas' collections metrics (Faithfulness/ContextPrecision) require the new
-# InstructorLLM interface, built via llm_factory + a native provider client.
-# LangChain wrappers like ChatGroq are no longer accepted directly, and the
-# installed ragas version's "groq" adapter is currently broken (it tries to
-# patch the client as if it were Anthropic's messages.create API). Groq
-# exposes an OpenAI-compatible endpoint, so we route through that instead
-# using provider="openai" — this path is well supported by Instructor.
 groq_openai_compat_client = OpenAICompatClient(
     api_key=os.environ["GROQ_API_KEY"],
     base_url="https://api.groq.com/openai/v1",
 )
 judge_llm = llm_factory("openai/gpt-oss-120b", provider="openai", client=groq_openai_compat_client)
 
-
-# ==========================================================
-# 3. CONNECT TO DATABASE (Outside the loop!)
-# ==========================================================
 client = qdrant_client.QdrantClient(
     host="localhost",
     port=6333,
@@ -72,10 +52,6 @@ filters = MetadataFilters(filters=[MetadataFilter(key="tenant_id", value="compan
 query_engine = index.as_retriever(filters=filters, similarity_top_k=20)
 cohere_rerank = CohereRerank(api_key=cohere_api_key, top_n=5)
 
-
-# ==========================================================
-# 4. TAKE THE EXAM
-# ==========================================================
 test_data = [
     {
         "question": "What are the six pillars of the AWS Well-Architected Framework?",
@@ -125,14 +101,6 @@ for item in test_data:
     
 print("\nAll questions tested! Handing over to RAGAS for grading...")
 
-# ==========================================================
-# 5. GRADE THE EXAM (Outside the loop!)
-# ==========================================================
-# This installed ragas version's evaluate() runner does an isinstance check
-# that the new `collections` metric classes fail (a version-mismatch bug
-# between `ragas.metrics.collections` and `ragas.evaluate`). So instead of
-# going through evaluate(), we score each sample directly with the metrics'
-# own async .ascore() method - the same API ragas' own docs use.
 faithfulness_metric = Faithfulness(llm=judge_llm)
 context_precision_metric = ContextPrecision(llm=judge_llm)
 
@@ -158,7 +126,6 @@ async def grade_all(samples):
                 retrieved_contexts=sample["retrieved_contexts"],
             )
         )
-        # small pause between calls so we don't immediately re-trip the TPM limit
         await asyncio.sleep(3)
         context_precision_result = await score_with_retry(
             lambda: context_precision_metric.ascore(
