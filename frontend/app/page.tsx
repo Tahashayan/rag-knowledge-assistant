@@ -44,6 +44,10 @@ export default function Home() {
         body: JSON.stringify({
           question: userQuestion,
           tenant_id: tenantId,
+          history: messages.slice(-4).map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
         }),
       });
 
