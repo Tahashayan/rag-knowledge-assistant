@@ -41,7 +41,7 @@ This project does not rely on "vibes" to prove accuracy. It is mathematically ev
 * **Orchestration:** LlamaIndex
 * **Vector Database:** Qdrant (Docker)
 * **Embeddings:** Ollama (`nomic-embed-text`) - *Privacy-preserving local embeddings.*
-* **Generation LLM:** Groq (`mixtral-8x7b` / `llama-3`) - *Lightning-fast inference.*
+* **Generation LLM:** Groq (`openai/gpt-oss-120b`) - *Lightning-fast inference.*
 * **Reranker:** Cohere Rerank API
 * **Evaluation & Tracing:** RAGAS, Langfuse
 
@@ -65,3 +65,7 @@ enterprise-rag-assistant/
 ├── data/                   # Raw PDFs (Company Handbooks, 10-K Reports)
 ├── .env.example            # Environment variable template
 └── requirements.txt        # Python dependencies
+
+
+<img width="1917" height="867" alt="image" src="https://github.com/user-attachments/assets/7305dc00-d1e5-4dd5-a58d-568513213bdc" />
+
