@@ -90,7 +90,8 @@ Settings.embed_model = OllamaEmbedding(
 )
 
 client = qdrant_client.QdrantClient(
-    host="localhost",
+    url=os.environ.get("QDRANT_URL", "http://localhost:6333"),
+    api_key=os.environ.get("QDRANT_API_KEY", ""),
     port=6333,
     grpc_port=6334,
     prefer_grpc=True,
