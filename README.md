@@ -7,6 +7,8 @@
 ![Qdrant](https://img.shields.io/badge/Qdrant-Vector_DB-red.svg)
 ![Groq](https://img.shields.io/badge/Groq-Llama_3-orange.svg)
 
+![Enterprise RAG Chat Interface](https://github.com/user-attachments/assets/7af12bcf-80ea-436c-bbfb-4f0e7785051b)
+
 A production-ready, multi-tenant Retrieval-Augmented Generation (RAG) system. This application allows users to securely "chat with their company data" using advanced vector search, reranking, and hallucination guardrails. 
 
 Built with **FastAPI**, **Next.js**, **LlamaIndex**, and **Qdrant**, it features real-time token streaming and enterprise-level observability.
@@ -67,5 +69,4 @@ enterprise-rag-assistant/
 └── requirements.txt        # Python dependencies
 
 
-<img width="1917" height="867" alt="image" src="https://github.com/user-attachments/assets/7305dc00-d1e5-4dd5-a58d-568513213bdc" />
 
