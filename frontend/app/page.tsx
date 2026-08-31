@@ -41,14 +41,18 @@ export default function Home() {
 
     try {
       // 3. Call your FastAPI backend
-      const response = await fetch("http://localhost:8000/chat", {
+      const response = await fetch("http://127.0.0.1:8000/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": "Bearer supersecret123" 
+        },
         body: JSON.stringify({
           question: userQuestion,
           tenant_id: tenantId,
         }),
       });
+
 
       if (!response.body) throw new Error("No response body");
 

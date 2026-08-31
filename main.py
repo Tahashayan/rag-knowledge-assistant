@@ -1,5 +1,6 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, Security
+from fastapi.security.api_key import APIKeyHeader
 from llama_index.core import Settings
 from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.vector_stores.qdrant import QdrantVectorStore
@@ -9,7 +10,7 @@ from llama_index.postprocessor.cohere_rerank import CohereRerank
 from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
 from llama_index.core.schema import QueryBundle
 from fastapi.responses import StreamingResponse
-from langfuse import get_client
+from langfuse import Langfuse
 from fastapi.middleware.cors import CORSMiddleware
 from llama_index.llms.groq import Groq
 from pydantic import BaseModel
@@ -17,20 +18,26 @@ import qdrant_client
 from dotenv import load_dotenv
 load_dotenv()
 
-cohere_api_key = os.environ["COHERE_API"]
-os.environ.setdefault("LANGFUSE_PUBLIC_KEY", "pk-lf-...")
-os.environ.setdefault("LANGFUSE_SECRET_KEY", "sk-lf-...")
-os.environ.setdefault("LANGFUSE_BASE_URL", "https://cloud.langfuse.com")
+LlamaIndexInstrumentor().instrument()
+
+API_KEY = os.environ.get("MY_API_TOKEN", "default_dev_token") 
+api_key_header = APIKeyHeader(name="Authorization", auto_error=True)
+
+def get_api_key(api_key_header: str = Security(api_key_header)):
+    token = api_key_header.replace("Bearer ", "") if "Bearer " in api_key_header else api_key_header
+    if token != API_KEY:
+        raise HTTPException(status_code=403, detail="Could not validate API Key")
+    return token
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["http://localhost:3000"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-langfuse = get_client()
+langfuse = Langfuse()
 
 if langfuse.auth_check():
     print("Langfuse client is authenticated and ready!")
@@ -58,34 +65,14 @@ client = qdrant_client.QdrantClient(
     timeout=600,        
 )
 
-collection_name = "enterprise_docs_v2"
-
-vector_store = QdrantVectorStore(client=client, collection_name=collection_name, enable_hybrid=True)
-storage_context = StorageContext.from_defaults(vector_store=vector_store)
-
-index = VectorStoreIndex.from_vector_store(
-    vector_store=vector_store,
-    storage_context=storage_context,
-)
-
-cohere_rerank = CohereRerank(api_key=cohere_api_key, top_n=10)
+vector_store = QdrantVectorStore(client=client, collection_name="enterprise_docs_v2", enable_hybrid=True)
+index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
+cohere_rerank = CohereRerank(api_key=os.environ["COHERE_API"], top_n=10)
 
 
 @app.post('/chat')
-def chat(request: ChatRequest):
-    with langfuse.start_as_current_observation(
-        as_type="span",
-        name="enterprise-rag-chat",
-    ) as trace:
-        trace.update(
-            input={
-                "question": request.question,
-                "tenant_id": request.tenant_id
-            }
-        )
-    filters = MetadataFilters(
-    filters=[MetadataFilter(key="tenant_id", value=request.tenant_id)]
-    )
+def chat(request: ChatRequest, api_key: str = Depends(get_api_key)):
+    filters = MetadataFilters(filters=[MetadataFilter(key="tenant_id", value=request.tenant_id)])
     query_engine = index.as_retriever(filters=filters, similarity_top_k=20)
     
     nodes = query_engine.retrieve(request.question)
@@ -111,34 +98,12 @@ def chat(request: ChatRequest):
     """
     
     def stream_generator():
-        full_response = ""
-        with langfuse.start_as_current_observation(
-        as_type="generation",
-        name="groq-rag-generation"
-        ) as generation:
-            generation.update(
-            input={
-                "question": request.question,
-                "prompt": prompt
-            },
-            model="openai/gpt-oss-120b"
-        )
         response = Settings.llm.stream_complete(prompt)
         for chunk in response:
             if chunk.delta:
-                full_response += chunk.delta
                 yield chunk.delta
-        generation.update(
-            output=full_response
-        )
-        trace.update(
-            output={
-                "answer": full_response
-            }
-        )
-    langfuse.flush()
-    return StreamingResponse(stream_generator())
 
+    return StreamingResponse(stream_generator())
 
 @app.get('/')
 def api_status():
