@@ -1,3 +1,4 @@
+import os
 from llama_index.core import Settings
 import qdrant_client
 import time
@@ -8,6 +9,9 @@ from llama_index.core import StorageContext, VectorStoreIndex
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from qdrant_client.http import models as qmodels
 from llama_index.readers.file import PyMuPDFReader
+from dotenv import load_dotenv
+
+load_dotenv()
 
 Settings.embed_model = OllamaEmbedding(
     model_name="nomic-embed-text",
@@ -46,11 +50,12 @@ nodes = splitter.get_nodes_from_documents(documents)
 print(f"Total nodes to index: {len(nodes)}")
 
 client = qdrant_client.QdrantClient(
-    host="localhost",
+    url=os.environ.get("QDRANT_URL", "http://localhost:6333"),
+    api_key=os.environ.get("QDRANT_API_KEY", ""),
     port=6333,
     grpc_port=6334,
-    prefer_grpc=True,  
-    timeout=600,        
+    prefer_grpc=True,
+    timeout=600,
 )
 
 collection_name = 'enterprise_docs_v2'
