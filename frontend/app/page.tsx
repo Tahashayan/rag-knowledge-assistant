@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 
-// Define the shape of our messages
 type Message = {
   role: "user" | "ai";
   content: string;
@@ -14,7 +13,6 @@ export default function Home() {
   const [tenantId, setTenantId] = useState("company_A");
   const [isLoading, setIsLoading] = useState(false);
   
-  // This ref helps us auto-scroll to the bottom of the chat
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -30,22 +28,18 @@ export default function Home() {
     if (!input.trim()) return;
 
     const userQuestion = input;
-    setInput(""); // Clear the input box instantly
+    setInput(""); 
     setIsLoading(true);
 
-    // 1. Add the user's message to the UI
     setMessages((prev) => [...prev, { role: "user", content: userQuestion }]);
-    
-    // 2. Add an empty AI message to the UI that we will slowly fill up
     setMessages((prev) => [...prev, { role: "ai", content: "" }]);
 
     try {
-      // 3. Call your FastAPI backend
       const response = await fetch("http://127.0.0.1:8000/chat", {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json",
-          "Authorization": "Bearer supersecret123" 
+            "Content-Type": "application/json",
+            "Authorization": "Bearer supersecret123" 
         },
         body: JSON.stringify({
           question: userQuestion,
@@ -53,10 +47,8 @@ export default function Home() {
         }),
       });
 
-
       if (!response.body) throw new Error("No response body");
 
-      // 4. The Magic: Read the stream token-by-token
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
 
@@ -64,20 +56,15 @@ export default function Home() {
         const { done, value } = await reader.read();
         if (done) break;
 
-        // Decode the raw bytes into text
         const chunk = decoder.decode(value, { stream: true });
 
-        // Update the LAST message in the array (the AI message) with the new text chunk
         setMessages((prev) => {
           const newMessages = [...prev];
           const lastIndex = newMessages.length - 1;
-          
-          // Create a brand new object for the last message
           newMessages[lastIndex] = {
             ...newMessages[lastIndex],
             content: newMessages[lastIndex].content + chunk.replace(/\*/g, "")
           };
-          
           return newMessages;
         });
       }
@@ -94,7 +81,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 text-gray-800 font-sans">
-      {/* HEADER: Multi-Tenant Selector */}
+      {/* HEADER */}
       <header className="bg-white shadow-sm p-4 flex justify-between items-center z-10">
         <h1 className="text-xl font-bold text-blue-600">Enterprise RAG Assistant</h1>
         <div className="flex items-center space-x-2">
@@ -102,7 +89,8 @@ export default function Home() {
           <select
             value={tenantId}
             onChange={(e) => setTenantId(e.target.value)}
-            className="border border-gray-300 rounded-md p-1 text-sm focus:outline-none focus:border-blue-500"
+            disabled={isLoading}
+            className="border border-gray-300 rounded-md p-1 text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50"
           >
             <option value="company_A">Company A (Valve & AWS)</option>
             <option value="company_B">Company B (Apple)</option>
@@ -132,7 +120,25 @@ export default function Home() {
                 <span className="font-bold text-xs uppercase opacity-50 block mb-1">
                   {msg.role === "user" ? "You" : "Assistant"}
                 </span>
-                {msg.content}
+
+                {/* ANIMATION LOGIC */}
+                {msg.role === "ai" && msg.content === "" && isLoading ? (
+                  /* 1. BOUNCING DOTS (Waiting for first token) */
+                  <div className="flex space-x-1.5 h-6 items-center px-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                ) : (
+                  /* 2. TEXT & BLINKING CURSOR (Typing effect) */
+                  <div>
+                    {msg.content}
+                    {msg.role === "ai" && isLoading && index === messages.length - 1 && (
+                      <span className="inline-block w-2 h-4 ml-1 bg-gray-500 animate-pulse align-middle rounded-sm"></span>
+                    )}
+                  </div>
+                )}
+
               </div>
             </div>
           ))
