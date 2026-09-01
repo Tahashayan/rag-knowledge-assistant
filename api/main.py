@@ -101,7 +101,6 @@ client = qdrant_client.QdrantClient(
 vector_store = QdrantVectorStore(
     client=client,
     collection_name="enterprise_docs_v2",
-    enable_hybrid=True
 )
 
 index = VectorStoreIndex.from_vector_store(
