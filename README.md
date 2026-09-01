@@ -9,7 +9,7 @@
 
 ![Enterprise RAG Chat Interface](https://github.com/user-attachments/assets/7af12bcf-80ea-436c-bbfb-4f0e7785051b)
 
-![Live Project Link](https://rag-knowledge-assistant-gamma.vercel.app/)
+🚀 [Live Project](https://rag-knowledge-assistant-gamma.vercel.app/)
 
 A production-ready, multi-tenant Retrieval-Augmented Generation (RAG) system. This application allows users to securely "chat with their company data" using advanced vector search, reranking, and hallucination guardrails. 
 
