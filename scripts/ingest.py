@@ -73,30 +73,50 @@ client.create_collection(
     ),
 )
 
+print("Creating payload index for tenant_id...")
+client.create_payload_index(
+    collection_name=collection_name,
+    field_name="tenant_id",
+    field_schema=qmodels.PayloadSchemaType.KEYWORD,
+)
+
 vector_store = QdrantVectorStore(client=client, collection_name=collection_name)
 storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
 
-BATCH_SIZE = 64
-MAX_RETRIES = 3
+BATCH_SIZE = 16
+MAX_RETRIES = 5
  
 index = VectorStoreIndex(nodes=[], storage_context=storage_context)
  
 for i in range(0, len(nodes), BATCH_SIZE):
     batch = nodes[i : i + BATCH_SIZE]
     attempt = 0
+    
     while attempt < MAX_RETRIES:
         try:
             index.insert_nodes(batch)
-            print(f"Indexed {i + len(batch)}/{len(nodes)}")
+            print(f"Successfully embedded and indexed {i + len(batch)}/{len(nodes)} chunks")
+            # Sleep for a tiny bit between successful batches to pace ourselves
+            time.sleep(2) 
             break
         except Exception as e:
+            error_msg = str(e).lower()
             attempt += 1
-            wait = 2 ** attempt
-            print(f"Batch {i}-{i+len(batch)} failed (attempt {attempt}/{MAX_RETRIES}): {e}")
+            
+            # If we hit the Cohere per-minute rate limit, wait a full 60 seconds!
+            if "429" in error_msg or "too many requests" in error_msg or "rate limit" in error_msg:
+                print(f"⚠️ Hit Cohere API rate limit! Sleeping for 60 seconds... (Attempt {attempt}/{MAX_RETRIES})")
+                time.sleep(60)
+            else:
+                # For standard network glitches, just wait a few seconds
+                wait = 2 ** attempt
+                print(f"Batch {i}-{i+len(batch)} failed (attempt {attempt}/{MAX_RETRIES}): {e}")
+                time.sleep(wait)
+                
             if attempt == MAX_RETRIES:
+                print("Max retries reached. Exiting script.")
                 raise
-            time.sleep(wait)
 
 info = client.get_collection(collection_name)
-print(f"Final status: {info.status}, points: {info.points_count}")
+print(f"\nINGESTION COMPLETE! Final status: {info.status}, points: {info.points_count}")
