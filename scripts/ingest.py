@@ -2,7 +2,7 @@ import os
 from llama_index.core import Settings
 import qdrant_client
 import time
-from llama_index.embeddings.ollama import OllamaEmbedding
+from llama_index.embeddings.cohere import CohereEmbedding
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core import StorageContext, VectorStoreIndex
@@ -13,9 +13,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-Settings.embed_model = OllamaEmbedding(
-    model_name="nomic-embed-text",
-    base_url="http://localhost:11434",
+Settings.embed_model = CohereEmbedding(
+    cohere_api_key=os.environ["COHERE_API"], 
+    model_name="embed-english-v3.0",
+    input_type="search_document" 
 )
 
 parser = PyMuPDFReader()
@@ -50,8 +51,8 @@ nodes = splitter.get_nodes_from_documents(documents)
 print(f"Total nodes to index: {len(nodes)}")
 
 client = qdrant_client.QdrantClient(
-    url=os.environ.get("QDRANT_URL", "http://localhost:6333"),
-    api_key=os.environ.get("QDRANT_API_KEY", ""),
+    url=os.environ["QDRANT_URL"],
+    api_key=os.environ["QDRANT_API_KEY"],
     port=6333,
     grpc_port=6334,
     prefer_grpc=True,
@@ -67,7 +68,7 @@ if client.collection_exists(collection_name):
 client.create_collection(
     collection_name=collection_name,
     vectors_config=qmodels.VectorParams(
-        size=768, 
+        size=1024, 
         distance=qmodels.Distance.COSINE,
     ),
 )

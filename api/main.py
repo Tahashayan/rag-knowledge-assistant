@@ -4,11 +4,11 @@ from fastapi import FastAPI, Depends, HTTPException, Security
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from llama_index.embeddings.cohere import CohereEmbedding
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import qdrant_client
 from llama_index.core import Settings, VectorStoreIndex
-from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.core.vector_stores import (
     MetadataFilters,
@@ -87,9 +87,10 @@ Settings.llm = Groq(
     api_key=os.environ["GROQ_API_KEY"]
 )
 
-Settings.embed_model = OllamaEmbedding(
-    model_name="nomic-embed-text",
-    base_url="http://localhost:11434",
+Settings.embed_model = CohereEmbedding(
+    cohere_api_key=os.environ["COHERE_API"], 
+    model_name="embed-english-v3.0",
+    input_type="search_query"
 )
 
 client = qdrant_client.QdrantClient(
